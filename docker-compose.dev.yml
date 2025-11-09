@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: routing
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+
+  planner-api:
+    build:
+      context: ../../services/planner-api
+    environment:
+      DATABASE_URL: postgresql+asyncpg://app:app@postgres:5432/routing
+      REDIS_URL: redis://redis:6379/0
+      HERE_API_KEY: CHANGEME
+    depends_on: [postgres, redis]
+    ports: ["8080:8080"]
+    volumes:
+      - ../../services/planner-api/app:/app/app
+      - ../../db:/app/db
+
+  optimizer-worker:
+    build:
+      context: ../../services/optimizer-worker
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on: [redis]
+    volumes:
+      - ../../services/optimizer-worker:/app
+
+volumes:
+  pgdata:
